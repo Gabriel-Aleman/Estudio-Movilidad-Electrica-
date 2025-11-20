@@ -5,11 +5,10 @@ import pandas as pd
 import numpy as np
 
 def genDF():
-    ruta_a = pd.read_csv("Data\\SanJoseDesampa.csv")
-    ruta_b = pd.read_csv("Data\\SanJoseAlajuela.csv")
-    ruta_c = pd.read_csv("Data\\LaUrucaPavasEscazu.csv")
-    ruta_d = pd.read_csv("Data\\SanJoseCarpioUruca.csv")
-
+    ruta_a = pd.read_csv("Data/SanJoseDesampa.csv")
+    ruta_b = pd.read_csv("Data/SanJoseAlajuela.csv")
+    ruta_c = pd.read_csv("Data/LaUrucaPavasEscazu.csv")
+    ruta_d = pd.read_csv("Data/SanJoseCarpioUruca.csv")
     df=pd.DataFrame()
     df["t_stamp"] = ruta_a["time"]
     df["Ruta: San Jose- Desamparados"]  = ruta_a["Trabajo grupal"]
