@@ -79,10 +79,9 @@ with sim:
 with mont:
     with st.container(border=True):
         dias    = st.number_input( "Días a simular", value=10,       min_value=0)
-        inter   = st.number_input("Intervalo entre datos",  min_value=5)
 
     if st.button("Crear resultado simulación"):
-        resultadoSimulacion=simular_consumo(df, intervalo_min=inter, dias_simulados=dias)
+        resultadoSimulacion=simular_consumo(df,  dias_simulados=dias)
         resultadoSimulacion.set_index("t_stamp", inplace=True)
         
         st.session_state.simul = True  # sim es tu DataFrame simulado
