@@ -66,41 +66,51 @@ def genDist(df):
 
 import random  # <- usar random.choice en lugar de np.random.choice
 
-def simular_consumo(df, intervalo_min=5, dias_simulados=100, agregar_ruido=True, sigma_rel=0.05, inicio_simulacion=None, random_seed=42):
-    np.random.seed(random_seed)
-    random.seed(random_seed)  # Semilla para random.choice
+def montecarlo_forecast(df, fecha_col, n_dias, n_simulaciones=1000):
+    """
+    Predice 1 año hacia el futuro (105,120 pasos de 5 min)
+    usando Monte Carlo multivariado.
+    """
     
-    # Fecha de inicio
-    if inicio_simulacion is None:
-        hoy = pd.Timestamp.today()
-        inicio_simulacion = pd.Timestamp(year=hoy.year + 1, month=1, day=1)
+    df = df.set_index(fecha_col)
+    datos = df.select_dtypes(include=[np.number])
+
+    # Cambios históricos (incrementos)
+    cambios = datos.diff().dropna()
     
-    # Crear columna de fecha a partir de t_stamp
-    df['Fecha'] = df['t_stamp'].dt.date
-    dias = df['Fecha'].unique()
-    
-    # Guardar cada día como bloque
-    bloques_dia = [df[df['Fecha'] == dia].copy() for dia in dias]
-    
-    simulacion = []
-    for i in range(dias_simulados):
-        dia_random = random.choice(bloques_dia)  # <- cambio aquí
-        dia_copy = dia_random.copy()
+    mu  = cambios.mean().values            # media de cambios
+    cov = cambios.cov().values            # covarianza multivariada
+
+    pasos = 288 * 365                     # 1 año = 105120 pasos de 5 min
+    x0 = datos.iloc[-1].values            # último registro real
+
+    simulaciones_acumuladas = np.zeros((pasos + 1, datos.shape[1]))
+
+    # Simulaciones
+    for i in range(n_simulaciones):
+        print (str(i*100/n_simulaciones)+"%")
+        trayectoria = np.zeros((pasos + 1, datos.shape[1]))
+        estado = x0.copy()
+        trayectoria[0] = estado
         
-        if agregar_ruido:
-            columnas_consumo = [col for col in df.columns if col not in ['t_stamp', 'Fecha']]
-            for col in columnas_consumo:
-                ruido = np.random.normal(loc=0, scale=sigma_rel, size=len(dia_copy))
-                dia_copy[col] = dia_copy[col] * (1 + ruido)
+        for i in range(1, pasos + 1):
+            cambio = np.random.multivariate_normal(mu, cov)
+            estado = estado + cambio
+            trayectoria[i] = estado
         
-        simulacion.append(dia_copy)
+        simulaciones_acumuladas += trayectoria
+        
     
-    df_simulado = pd.concat(simulacion).reset_index(drop=True)
-    
-    # Ajustar fechas
-    inicio = pd.Timestamp(inicio_simulacion)
-    df_simulado['t_stamp'] = [inicio + pd.Timedelta(minutes=intervalo_min*i) for i in range(len(df_simulado))]
-    
-    df_simulado = df_simulado.drop(columns=['Fecha'])
-    
-    return df_simulado
+    # Promedio de simulaciones → predicción final
+    prediccion_media = simulaciones_acumuladas / n_simulaciones
+
+    # Crear fechas futuro
+    fecha_inicio = df.index[-1]
+    fechas_futuras = pd.date_range(
+        start=fecha_inicio,
+        periods=pasos + 1,
+        freq='5min'
+    )
+
+    pred_df = pd.DataFrame(prediccion_media, index=fechas_futuras, columns=datos.columns)
+    return pred_df

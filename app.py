@@ -11,8 +11,12 @@ if 'resultadoSimulacion' not in st.session_state:
 
 st.html("<h1 style='color:white;padding-left:20px;background: linear-gradient(to right, #8b0000, #ff0000, #ffa07a); border-radius:10px 50px 50px 10px'>Aplicación de estudio de movilidad eléctrica<h1>")
 st.set_page_config(layout="wide")
-df = genDF()
 
+with st.sidebar:
+    st.link_button("Electric Vehicle Charging and Grid Integration Tool",  "https://www.iea.org/data-and-statistics/data-tools/ev-charging-and-grid-integration-tool")
+
+
+df = genDF()
 
 sim, mont = st.tabs(["Resultados simulación", "Estimación montecarlo"])
 
@@ -79,10 +83,13 @@ with sim:
 with mont:
     with st.container(border=True):
         dias    = st.number_input( "Días a simular", value=10,       min_value=0)
+        n_sim    = st.number_input( "Número de simulaciones", value=1000,       min_value=0)
 
-    if st.button("Crear resultado simulación"):
-        resultadoSimulacion=simular_consumo(df,  dias_simulados=dias)
-        resultadoSimulacion.set_index("t_stamp", inplace=True)
+
+    if st.button("Crear resultado de forecast"):
+        resultadoSimulacion=montecarlo_forecast(df,  n_dias=dias, n_simulaciones=n_sim, fecha_col="t_stamp")
+        resultadoSimulacion=resultadoSimulacion["mean"]
+        #resultadoSimulacion.set_index("t_stamp", inplace=True)
         
         st.session_state.simul = True  # sim es tu DataFrame simulado
         st.session_state.resultadoSimulacion = resultadoSimulacion
@@ -92,7 +99,7 @@ with mont:
         st.write( st.session_state.resultadoSimulacion)
         st.success(f"{len(st.session_state.resultadoSimulacion)} elementos")
 
-        if st.button("Graficar simulación"):
+        if st.button("Graficar forecast"):
             st.line_chart( st.session_state.resultadoSimulacion)
 
 
